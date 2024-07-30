@@ -24,40 +24,49 @@ ui <- fluidPage(
   useShinyjs(),
   navbarPage("Anonymization Risk and Loss",
              tabsetPanel(type='tabs',id='mainTabSet',
-                         tabPanel("Setup",
+                         tabPanel(titlePanel("Setup"),
                                   sidebarPanel(width=3,
                                                h4("Upload Dataset Containing Variables to be Anonymized (e.g. ADSL)"),HTML("<br/>"),
                                                fileInput('inDemogFile',"Choose Dataset",placeholder='C:\\'),
                                                hidden(selectInput('studyid','Variable(s) to use for STUDYID:',NULL,multiple=T)),
-                                               hidden(selectInput('usubjid','Variable(s) to use for USUBJID:',NULL,multiple=T))
-                                  ),
+                                               hidden(selectInput('usubjid','Variable(s) to use for USUBJID:',NULL,multiple=T))),
                                   mainPanel(
-                                    column(8,tabPanel('Variables',h4(HTML("<b>Select Quasi-Identifier Variables:</b><br/>")),uiOutput('selectVars'),value='inputVars')
-                                    ),
-                                    column(4,tabPanel('Variable Types',h4(HTML("<b>Select Variable Types:</b><br/>")),uiOutput("variables"),value='inVarPanel')
-                                    )
-                                  )
-                                  ,value='setupPanel'),
+                                    column(8,tabPanel('Variables',h4(HTML("<b>Select Quasi-Identifier Variables:</b><br/>")),uiOutput('selectVars'),value='inputVars')),
+                                    column(4,tabPanel('Variable Types',h4(HTML("<b>Select Variable Types:</b><br/>")),uiOutput("variables"),value='inVarPanel')))
+                          ,value='setupPanel'),
                          
-                         tabPanel("Calculate",
-                                  sidebarPanel(                              
-                                    h4(HTML("<b>Download Key File:</b>")),
-                                    downloadLink('downloadData', 'Download KEY.xlsx'),
-                                    HTML("<br/>"),
-                                    HTML("<br/>"),
-                                    fluidRow(column(12,numericInput('probAttack','Probability of Attack HTML (only for advanced users, ask before changing)',0.3,min=0.025,max=1,step=0.025)),
-                                             column(12,HTML("<br/>"),checkboxInput('includeFuzz',HTML('<b>Include Fuzz?</b>'),value=F)),
-                                             column(12,h4(HTML("<b>Risk:</b>")),uiOutput("risk")),
-                                             column(12,h4(HTML("<b>Loss:</b>")),uiOutput("loss")),
-                                             column(12,h4(HTML('<b>Average Loss:</b>')),uiOutput('avg.loss')),
-                                             column(12,h4(HTML('<b>Equivalence Classes:</b>')),uiOutput('eqvClassOut')))
-                                  ),
-                                  mainPanel(
-                                    
-                                    uiOutput("riskloss")
-                                  )
+                         tabPanel(titlePanel('Calculate'),
+                           fluidRow(column(2, h4(HTML("<b>Risk:</b>")),uiOutput("risk"),
+                                              h4(HTML("<b>Loss:</b>")),uiOutput("loss"),
+                                              h4(HTML('<b>Average Loss:</b>')),uiOutput('avg.loss')),
+                                    column(8,fluidRow(style = "border: 4px double red;",
+                                                      column(4),
+                                                      column(5,numericInput('probAttack','Probability of Attack HTML (only for advanced users, ask before changing)',0.3,min=0.025,max=1,step=0.025)),
+                                                      column(1,checkboxInput('includeFuzz',HTML('<b>Include Fuzz?</b>'),value=F)),
+                                                      column(2)),
+                                             column(12,uiOutput("riskloss"))),
+                                    column(2,h4(HTML('<b>Equivalence Classes:</b>')),uiOutput('eqvClassOut'))),
                                   ,value='calcPanel'),
-                         tabPanel("Explore",value='explorePanel',
+                         
+                         # tabPanel("Calculate",
+                         #          sidebarPanel(                              
+                         #            h4(HTML("<b>Download Key File:</b>")),
+                         #            downloadLink('downloadData', 'Download KEY.xlsx'),
+                         #            HTML("<br/>"),
+                         #            HTML("<br/>"),
+                         #            fluidRow(column(12,numericInput('probAttack','Probability of Attack HTML (only for advanced users, ask before changing)',0.3,min=0.025,max=1,step=0.025)),
+                         #                     column(12,HTML("<br/>"),checkboxInput('includeFuzz',HTML('<b>Include Fuzz?</b>'),value=F)),
+                         #                     column(12,h4(HTML("<b>Risk:</b>")),uiOutput("risk")),
+                         #                     column(12,h4(HTML("<b>Loss:</b>")),uiOutput("loss")),
+                         #                     column(12,h4(HTML('<b>Average Loss:</b>')),uiOutput('avg.loss')),
+                         #                     column(12,h4(HTML('<b>Equivalence Classes:</b>')),uiOutput('eqvClassOut')))
+                         #          ),
+                         #          mainPanel(
+                         #            
+                         #            uiOutput("riskloss")
+                         #          )
+                         #          ,value='calcPanel'),
+                         tabPanel(titlePanel("Explore"),value='explorePanel',
                                   mainPanel(
                                     tabsetPanel(id='exploreSubPanel',
                                                 tabPanel('Class Counts',tabsetPanel(id='countPanel')),
@@ -321,13 +330,13 @@ server <- function(input, output, session) {
           if (!is.null(lower)){
             list(
               tryCatch({
-                fluidRow(
-                  titlePanel(h4(HTML(paste('<b>',paste('&nbsp',var),'</b><br/>')))),
+                fluidRow(style = "border: 2px solid blue;",
+                  titlePanel(h4(HTML(paste('<center><b>',paste('&nbsp',var),'</b></center><br/>')))),
+                  column(2,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=if(is.null(oldInclude)){T}else{oldInclude})),
                   column(2,numericInput(paste0('lowerLimit',var),'Lower',min=signif(min(inds[,var],na.rm=T),1),max=signif(max(inds[,var],na.rm=T),1),value=if(is.null(lower)){min(inds[,var],na.rm=T)}else{lower})),
                   column(3,sliderInput(paste0('range',var),var,min=0,max=signif(max(inds[,var],na.rm=T)-min(inds[,var],na.rm=T),1),value=if(is.null(range)){0}else{range},step=step)),
                   column(2,numericInput(paste0('upperLimit',var),'Upper',min=signif(min(inds[,var],na.rm=T),1),max=signif(max(inds[,var],na.rm=T),1),value=if(is.null(upper)){max(inds[,var],na.rm=T)+1}else{upper})),
                   column(1,numericInput(paste0('fuzz',var),'Fuzz:',value=if(is.null(oldFuzz)){0}else{oldFuzz})),
-                  column(2,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=if(is.null(oldInclude)){T}else{oldInclude})),
                   column(2,checkboxInput(paste0('eclass',var),'Include in Equivalence Classes',value=if(is.null(oldClass)){F}else(oldClass)))
                 )
               },
@@ -343,13 +352,13 @@ server <- function(input, output, session) {
               })
             )
           } else {
-            fluidRow(
-              titlePanel(h4(HTML(paste('<b>',paste('&nbsp',var),'</b><br/>')))),
+            fluidRow(style = "border: 2px solid blue;",
+              titlePanel(h4(HTML(paste('<center><b>',paste('&nbsp',var),'</b></center><br/>')))),
+              column(2,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=T)),
               column(2,numericInput(paste0('lowerLimit',var),'Lower',min=signif(min(inds[,var],na.rm=T),1),max=signif(max(inds[,var],na.rm=T),1),value=min(inds[,var],na.rm=T))),
               column(3,sliderInput(paste0('range',var),var,min=0,max=signif(max(inds[,var],na.rm=T)-min(inds[,var],na.rm=T),1),value=0,step=step)),
               column(2,numericInput(paste0('upperLimit',var),'Upper',min=signif(min(inds[,var],na.rm=T),1),max=signif(max(inds[,var],na.rm=T),1),value=max(inds[,var],na.rm=T))),
               column(1,numericInput(paste0('fuzz',var),'Fuzz:',value=0)),
-              column(2,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=T)),
               column(2,checkboxInput(paste0('eclass',var),'Include in Equivalence Classes',value=F)))
           }
           
@@ -357,18 +366,21 @@ server <- function(input, output, session) {
           print('cat fault')
           catNum <- isolate(input[[paste0('catNum',var)]])
           # oldInclude <- isolate(input[[paste0('rinclude',var)]])
-          fluidRow(
-            titlePanel(h4(HTML(paste('<b>',paste('&nbsp',var),'</b><br/>')))),
-            column(12,numericInput(paste0('catNum',var),'Number of New Categories:',if(is.null(catNum)){1}else{catNum},min=1)),
-            column(8,tabPanel('Categories:',uiOutput(paste0('cat',var)))),
+          fluidRow(style = "border: 2px solid green;",
+            titlePanel(h4(HTML(paste('<center><b>',paste('&nbsp',var),'</b></center><br/>')))),
             column(2,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=if(is.null(oldInclude)){T}else{oldInclude})),
+            column(8,fluidPage(fluidRow(column(12,numericInput(paste0('catNum',var),'Number of New Categories:',if(is.null(catNum)){1}else{catNum},min=1))),
+                               fluidRow(column(12,tabPanel('Categories:',uiOutput(paste0('cat',var))))))),
+            # column(12,numericInput(paste0('catNum',var),'Number of New Categories:',if(is.null(catNum)){1}else{catNum},min=1)),
+            # column(8,tabPanel('Categories:',uiOutput(paste0('cat',var)))),
             column(2,checkboxInput(paste0('eclass',var),'Include in Equivalence Classes',value=if(is.null(oldClass)){F}else(oldClass)))
           )
         } else {
-          fluidRow(
-            titlePanel(h4(HTML(paste('<b>',paste('&nbsp',var),'</b><br/>')))),
-            column(4,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=if(is.null(oldInclude)){T}else{oldInclude})),
-            column(4,checkboxInput(paste0('eclass',var),'Include in Equivalence Classes',value=if(is.null(oldClass)){F}else(oldClass)))
+          fluidRow(style = "border: 2px solid pink;",
+            titlePanel(h4(HTML(paste('<center><b>',paste('&nbsp',var),'</b></center><br/>')))),
+            column(2,checkboxInput(paste0('rinclude',var),'Include in Risk Calculation?',value=if(is.null(oldInclude)){T}else{oldInclude})),
+            column(8),
+            column(2,checkboxInput(paste0('eclass',var),'Include in Equivalence Classes',value=if(is.null(oldClass)){F}else(oldClass)))
           )
         } 
       })
@@ -398,6 +410,8 @@ server <- function(input, output, session) {
           lower <- nums[[var]][1]
           range <- nums[[var]][2]
           upper <- nums[[var]][3]
+          fuzz <- max(0,input[[paste0('fuzz',var)]])
+          range <- sum(range,fuzz)
           
           #If less than lower bound
           ns[,divar] <- apply(ns,1,function(x){
@@ -523,7 +537,7 @@ server <- function(input, output, session) {
   
   getNewds <- function(){
     print('getNewds')
-    ds <- apds()
+    ds <- apds(fuzz=input$includeFuzz)
     return(ds)
   }
   
@@ -566,12 +580,14 @@ server <- function(input, output, session) {
       rvars <- names(eClassIncludeVars())[unlist(eClassIncludeVars())]
       rvars <- substr(rvars,7,nchar(rvars))
       print('class riskdata')
+      print('CLASS = T')
       print(rvars)
     } else {
       riskds <- apds(fuzz=input$includeFuzz,initVars=initVars)
       rvars <- names(riskIncludeVars())[unlist(riskIncludeVars())]
       rvars <- substr(rvars,9,nchar(rvars))
       print('class riskdata')
+      print('class = F')
       print(rvars)
     }
     kvars <- rvars[!rvars %in% input$selectedVars[varTypes() == 'drop']]
@@ -642,15 +658,15 @@ server <- function(input, output, session) {
     if (sum(unlist(eClassIncludeVars())) > 0){
       print('eq Classes')
       print(eClassIncludeVars())
-      print(getRiskData(subset='Y'))
-      eqds <- rinds(getRiskData(subset='Y',class=T),eClassIncludeVars(),class=T)
+      print(getRiskData(subset='Y',class=T))
+      eqds <- rinds(getRiskData(subset='Y',class=T),unlist(eClassIncludeVars()),class=T)
       print('eqds done')      
       #Display percentage of equivalence class counts
       numClasses <- sum(eqds$n)
       classGrps <- eqds %>% mutate(classGrp=ifelse(n>9,'At least 10',ifelse(n>=3,'At least 3',ifelse(n==1,'Single Class','not')))) %>%
         group_by(classGrp) %>% summarize(nsum=sum(n)) %>%
         mutate(perc=round((nsum/numClasses)*100,1))
-      
+     
       eqvClassOut <- c(paste0('Single Member:',max(classGrps[classGrps$classGrp == 'Single Class','perc'],0,na.rm=T),'%'),paste0('At least 3 Members:',max(classGrps[classGrps$classGrp == 'At least 3','perc'],0,na.rm=T),'%'),
                        paste0('At least 10 Members:',max(classGrps[classGrps$classGrp == 'At least 10','perc'],0,na.rm=T),'%'))
       
@@ -791,8 +807,9 @@ server <- function(input, output, session) {
   
   exploreData <- function(){
     print('exploreData')
+    print('eq Classes')
     exploreData <- getRiskData()
-    eplotds <- rinds(exploreData,riskIncludeVars())
+    eplotds <- rinds(exploreData,eClassIncludeVars(),class=T)
     print(eplotds)
     output$rinds <- renderDT(eplotds)
     print('eplot')    
@@ -809,7 +826,8 @@ server <- function(input, output, session) {
         theme(legend.position="none",axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,size = 12)) +
         labs(x='Equivalence Class Size',y='Percentage of Total Classes')
     })
-    print('mapply') 
+    
+    print('explore plots') 
     mapply(function(var,varname,origvar,type){
       removeTab('countPanel',substr(var,1,nchar(var)-2))
       if (type == 'num'){
