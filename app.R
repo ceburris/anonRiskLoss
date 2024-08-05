@@ -40,7 +40,7 @@ ui <- fluidPage(
                                               h4(HTML("<b>Loss:</b>")),uiOutput("loss"),
                                               h4(HTML('<b>Average Loss:</b>')),uiOutput('avg.loss')),
                                     column(8,fluidRow(style = "border: 4px double red;",
-                                                      column(4),
+                                                      column(4,downloadLink('downloadData', 'Download KEY.xlsx')),
                                                       column(5,numericInput('probAttack','Probability of Attack HTML (only for advanced users, ask before changing)',0.3,min=0.025,max=1,step=0.025)),
                                                       column(1,checkboxInput('includeFuzz',HTML('<b>Include Fuzz?</b>'),value=F)),
                                                       column(2)),
@@ -680,6 +680,10 @@ server <- function(input, output, session) {
     updateRisk()
   })
   
+  # observeEvent(fuzzChg(),{
+  #   updateRisk()
+  # })
+  
   observeEvent(riskIncludeVars(),{
     updateRisk()
   })
@@ -737,7 +741,9 @@ server <- function(input, output, session) {
         allNumf <- function(name,type,limit){
           for (i in 1:length(name)){
             if (type[i] == 'num'){
-              tmp <- data.frame(variable=name[i],lowerLimit=unlist(limit[name[i]][[1]][1]),interval=unlist(limit[name[i]][[1]][2]),upperLimit=unlist(limit[name[i]][[1]][3]),includeInRisk=unlist(input[[paste0('rinclude',name[i])]]))
+              tmp <- data.frame(variable=name[i],lowerLimit=unlist(limit[name[i]][[1]][1]),interval=unlist(limit[name[i]][[1]][2]),upperLimit=unlist(limit[name[i]][[1]][3]),
+                                Fuzz=unlist(input[[paste0('fuzz',name[i])]]),includeInRisk=unlist(input[[paste0('rinclude',name[i])]]),includeInEClass=unlist(input[[paste0('eclass',name[i])]]))
+              # print(includeInEClass=unlist(input[[paste0('eclass',name[i])]]))
               allNum <- rbind(allNum,tmp)
             }
           }
@@ -756,7 +762,8 @@ server <- function(input, output, session) {
           if (type[ci] == 'cat'){
             for (gi in 1:input[[paste0('catNum',var[ci])]]){
               values <- input[[paste0('catValue',gi,'_',var[ci])]]
-              charsTmp <- data.frame(variableName=rep(var[ci],length(values)),categoryName=rep(input[[paste0('catName',gi,'_',var[ci])]],length(values)),categoryValue=values,includeInRisk=unlist(input[[paste0('rinclude',var[ci])]]))
+              charsTmp <- data.frame(variableName=rep(var[ci],length(values)),categoryName=rep(input[[paste0('catName',gi,'_',var[ci])]],length(values)),categoryValue=values,
+                                     includeInRisk=unlist(input[[paste0('rinclude',var[ci])]]),includeInEClass=unlist(input[[paste0('eclass',var[ci])]]))
               chars <- rbind(chars,charsTmp)
             }
           }
@@ -776,12 +783,12 @@ server <- function(input, output, session) {
       dskeys[['Key']] <- dskey
       dskeys[['NumericMapping']] <- allNum
       dskeys[['CategoryMapping']] <- allChar
-      
+
       tmp <- c('Percent Average Loss',round(rAvgLoss$data,digits=2))
       tmp2 <- c('Total Risk Score',rTotRisk$data)
       tmp3 <- t(rLoss$data)
       tmp4 <- rbind(tmp,tmp2)
-      
+     
       dskeys[['Risk']] <- tmp4
       dskeys[['Classes']] <- eclass
       
